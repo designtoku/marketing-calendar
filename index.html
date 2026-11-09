@@ -507,6 +507,12 @@ a.stile-media:hover img{outline:2px solid var(--accent);outline-offset:-2px}
 .adp-dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:4px 0 0;font-size:12.5px}
 .adp-dl dt{color:var(--muted)}.adp-dl dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
 .adp-dl dd.big{font-weight:700;font-size:14px}
+.adp-info{background:var(--soft);border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;margin-top:2px}
+.adp-info-h{font-size:11px;font-weight:700;color:var(--sub)}
+.adp-info dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0}
+.adp-info dt{color:var(--muted);white-space:nowrap}.adp-info dd{margin:0;color:var(--ink);word-break:break-all}
+.adp-copy{margin:0;color:var(--sub);line-height:1.5;white-space:pre-line;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.adp-link{font-size:12px;color:#1B64DA;text-decoration:none}.adp-link:hover{text-decoration:underline}
 .adp-badge{font-size:11px;padding:2px 7px;border-radius:999px;background:#E8F3FF;color:#1B64DA;font-weight:600;white-space:nowrap}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .adp-badge{background:#1B2A40;color:#7DB4FF}}
 :root[data-theme="dark"] .adp-badge{background:#1B2A40;color:#7DB4FF}
@@ -839,11 +845,11 @@ footer{color:var(--muted);font-size:12px}
         <div class="ad-bar"><span class="eyebrow">메타: Meta 연동 · 매일 8시·13시 자동 수집 · 네이버: 직접 입력 · 예산의 ‘메타광고’ · ‘네이버 검색광고’와 비교</span><span id="metaSyncB"></span>
           <span style="margin-left:auto;display:flex;align-items:center;gap:10px"><span id="nstatus" class="eyebrow" role="status"></span><button class="btn primary" id="addNaver" hidden>＋ 네이버 광고 입력</button></span></div>
         <div id="naverEditor" hidden></div>
-        <div id="adBrands" style="display:flex;flex-direction:column;gap:16px"></div>
         <div class="panel" id="adPerfPanel">
-          <div class="panel-head"><div><h3 id="adPerfTitle">광고 내용 · 성과</h3><span class="eyebrow">선택한 브랜드 · 광고비 높은 순 · 이미지를 누르면 크게 보기</span></div></div>
+          <div class="panel-head"><div><h3 id="adPerfTitle">광고 내용 · 성과</h3><span class="eyebrow">선택한 브랜드 · 광고비 높은 순 · 소재 이미지를 누르면 크게 보기</span></div></div>
           <div id="adPerf"></div>
         </div>
+        <div id="adBrands" style="display:flex;flex-direction:column;gap:16px"></div>
         <div class="panel">
           <div class="panel-head"><h3>월별 광고비 합산</h3><span class="eyebrow">선택한 브랜드 합계 · 광고비 / 예산 (원)</span></div>
           <div class="tbl-wrap"><table id="adMonths"></table></div>
@@ -2080,8 +2086,12 @@ function adPerfItems(bs,m){
     const r=adRow("meta",b,m), ads=r&&Array.isArray(r.ads)?r.ads:[];
     for(const a of ads){
       const run=adRuns.find(x=>x.brand===b&&((a.adId&&x.adId===a.adId)||(a.imgId&&x.imgId===a.imgId&&x.name===a.name)||x.name===a.name)&&x.start&&D(x.start)<=me&&D(x.end||x.start)>=ms);
+      const z={...(run||{}),...a}, pick=(...k)=>{for(const x of k){const v=z[x]; if(v!=null&&String(v).trim()) return String(v).trim();} return "";};
       out.push({b,ch:"메타 광고",name:a.name||"(이름 없음)",kind:a.kind||"",account:a.account||"",imgId:a.imgId||"",start:run?.start||"",end:run?(run.end||run.start):"",
-        s:+a.spend||0,i:+a.impressions||0,c:+a.clicks||0});
+        s:+a.spend||0,i:+a.impressions||0,c:+a.clicks||0,
+        info:{campaign:pick("campaign","campaignName","campaign_name"),adset:pick("adset","adsetName","adset_name"),title:pick("title","headline"),
+          body:pick("body","text","message","copy","primaryText","primary_text"),cta:pick("cta","callToAction","call_to_action"),link:pick("link","url","linkUrl","link_url"),
+          status:pick("status","effective_status"),objective:pick("objective")}});
     }
     if(r&&!ads.length&&(+r.spend||+r.impressions)) out.push({b,ch:"메타 광고",name:"메타 광고 전체",kind:"소재 정보 없음",s:+r.spend||0,i:+r.impressions||0,c:+r.clicks||0});
     const nv=adRow("naver",b,m);
@@ -2090,6 +2100,16 @@ function adPerfItems(bs,m){
       out.push({b,ch:"네이버 광고",name:`네이버 ${label}`,kind:label,memo:nv.memo||"",s,i,c});}
   }
   return out.sort((a,c)=>c.s-a.s);
+}
+const AD_ST={ACTIVE:"게재 중",PAUSED:"일시중지",ARCHIVED:"보관됨",DELETED:"삭제됨",CAMPAIGN_PAUSED:"캠페인 중지",ADSET_PAUSED:"광고 세트 중지",IN_PROCESS:"처리 중",WITH_ISSUES:"문제 있음",DISAPPROVED:"승인 거부",PENDING_REVIEW:"검토 중"};
+function adInfo(x){
+  const dt=s=>s?s.replace(/-/g,"."):"", f=x.info||{};
+  const rows=[["형식",x.kind],["계정",x.account],["기간",x.start?`${dt(x.start)} – ${dt(x.end).slice(5)}`:""],["상태",AD_ST[String(f.status).toUpperCase()]||f.status],["목표",f.objective],
+    ["캠페인",f.campaign],["광고 세트",f.adset],["제목",f.title],["버튼",f.cta]].filter(r=>r[1]);
+  if(x.ch!=="메타 광고") return "";
+  const link=/^https?:\/\//.test(f.link||"")?`<a class="adp-link" href="${esc(f.link)}" target="_blank" rel="noopener">연결 페이지 ↗</a>`:"";
+  return `<div class="adp-info"><span class="adp-info-h">소재 정보</span>${rows.length?`<dl>${rows.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`:""}
+    ${f.body?`<p class="adp-copy">${esc(f.body)}</p>`:""}${link}</div>`;
 }
 function renderAdPerf(bs,m){
   adPerfTitle.textContent=`${m}월 광고 내용 · 성과`;
@@ -2104,10 +2124,11 @@ function renderAdPerf(bs,m){
     const badges=[x===top&&x.s?"광고비 1위":"",x===bestCtr?"클릭률 최고":"",x===bestCpc?"클릭당 비용 최저":""].filter(Boolean);
     const media=x.imgId?`<button class="adp-img" data-img="${esc(x.imgId)}" data-cap="${esc(x.name)}" aria-label="${esc(x.name)} 이미지 크게 보기"><img src="images/${esc(x.imgId)}.jpg" alt="${esc(x.name)} 광고 소재" loading="lazy"></button>`
       :`<span class="adp-ph">${esc(x.ch)}<small>${esc(x.kind||"이미지 없음")}</small></span>`;
-    const sub=[x.ch==="메타 광고"?x.kind:"",x.account,x.start?`${dt(x.start)} – ${dt(x.end)}`:""].filter(Boolean).join(" · ");
+    const sub="";
     return `<article class="adp">${media}<div class="adp-body">
       <div class="adp-top"><span class="bname ${x.b}">${BR[x.b].name}</span><span class="pill">${esc(x.ch)}</span>${badges.map(t=>`<span class="adp-badge">${t}</span>`).join("")}</div>
       <b class="adp-name" title="${esc(x.name)}">${esc(x.name)}</b>${sub?`<span class="adp-sub">${esc(sub)}</span>`:""}${x.memo?`<span class="adp-sub">${esc(x.memo)}</span>`:""}
+      ${adInfo(x)}
       <dl class="adp-dl"><dt>광고비</dt><dd class="big">${won(x.s)}</dd><dt>노출</dt><dd>${fmtN(x.i)}</dd><dt>클릭</dt><dd>${fmtN(x.c)}</dd><dt>클릭률</dt><dd>${pct2(x.c,x.i)}</dd><dt>클릭당 비용</dt><dd>${cpc(x.s,x.c)}</dd></dl>
     </div></article>`;}).join("")}</div>`;
   adPerf.querySelectorAll("[data-img]").forEach(x=>x.onclick=()=>openImg(x.dataset.img,x.dataset.cap));
