@@ -944,7 +944,7 @@ let sec=(location.hash||"").slice(1); if(!SECS.some(s=>s.id===sec)) sec=ls.get("
 
 /* ---------- shared data (db) ---------- */
 let dbRef=null, dbState="loading", canWrite=false;
-let PUBLIC=false, PUBLIC_AT=""; const PUBLIC_HIDE=[];
+let PUBLIC=false, PUBLIC_AT=""; const PUBLIC_HIDE=["ads"];
 let newsDoc=null, newsTab=ls.get("mc-news")||"전체", newsMore=false, ideaOpen=false, ideas=[], userNs=null, myId=null, isAdmin=false, adRuns=[], listMonth=0, promoImgs=[], topItems=[], assetsNs=null, salesM=[], naverAds=[], followers=[], sales=[], bRows=[], posts=[], spends=[], manualPosts=[], igMedia=[], metaAds=[], metaSync=null;
 const rowAmt=(r,m)=>Number(r["m"+m])||0;
 const flash=(el,t)=>{el.textContent=t; setTimeout(()=>{if(el.textContent===t) el.textContent=""},3500)};
@@ -2294,7 +2294,7 @@ async function loadPublic(){
     try{const r=await fetch("data.json",{cache:"no-store"}); if(!r.ok) return false; d=await r.json();}catch(e){return false;}
   }
   PUBLIC=true; canWrite=false; document.documentElement.classList.add("is-public");
-  manualPosts=Array.isArray(d.posts)?d.posts:[]; igMedia=d.ig_media||[]; mergePosts();
+  igMedia=d.ig_media||[]; mergePosts();
   followers=(d.ig_followers||[]).map(x=>({...x,followers:Number(x.followers)||0}));
   adRuns=(d.ad_runs||[]).flatMap(x=>(x.runs||[]).map(r=>({...r,brand:r.brand||x.brand})));
   regPromos=(d.promos||[]).filter(x=>x.b&&x.s&&x.e&&x.name).map(x=>({...x,items:x.items||[],benefit:x.benefit||[]}));
