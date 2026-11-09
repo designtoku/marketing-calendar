@@ -1044,7 +1044,7 @@ function newsCard(){
   const row=x=>`<div class="news-row" data-ni="${items.indexOf(x)}"><span class="news-cat">${esc(x.cat||"")}</span>
       <a class="news-t" href="${/^https?:\/\//.test(x.url||"")?esc(x.url):"#"}" target="_blank" rel="noopener">${esc(x.title)}</a>
       <span class="news-src">${(x.brand||[]).map(b=>`<span class="dot ${b}"></span>`).join("")}${esc(x.source||"")}${x.date?` · ${esc(String(x.date).slice(5).replace(/-/g,"."))}`:""}</span></div>`;
-  return `<section class="card news-card"><div class="card-head"><div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><h3 style="margin:0">마케팅 소식</h3><span class="eyebrow">${newsDoc?`${esc(newsDoc.updated||"")} 업데이트 · 매일 오전 8시 새 소식 · 기사 제목·요약과 원문 링크`:"아직 수집된 소식이 없습니다"}</span></div></div>
+  return `<section class="card news-card"><div class="card-head"><div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><h3 style="margin:0">마케팅 소식</h3><span class="eyebrow">${newsDoc?`${esc(newsDoc.updated||"")} 업데이트 · 매일 오전 10시 새 소식 · 기사 제목·요약과 원문 링크`:"아직 수집된 소식이 없습니다"}</span></div></div>
     ${items.length?`<div class="news-tabs" role="tablist">${cats.map(c=>`<button role="tab" data-ntab="${c}" aria-selected="${c===newsTab}">${c}${c!=="전체"?` <span class="num">${items.filter(x=>x.cat===c).length}</span>`:""}</button>`).join("")}</div>
     <div class="news-list">${shown.map(row).join("")}</div>${l.length>3?`<button class="more news-more" data-nmore="1">${newsMore?"접기":`${l.length-3}건 더 보기`}</button>`:""}
     ${newsDoc&&newsDoc.notes&&(newsTab==="전체"||newsTab==="경쟁사")?`<small class="news-note">${esc(newsDoc.notes)}</small>`:""}`:`<div class="card-body"><span class="empty">다음 갱신 때 업계·정책·경쟁사 소식이 채워집니다.</span></div>`}</section>`;
