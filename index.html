@@ -493,6 +493,23 @@ a.stile-media:hover img{outline:2px solid var(--accent);outline-offset:-2px}
 .pb-act{display:flex;align-items:center;gap:12px}.pb-act .more.del{color:var(--muted)}.pb-act .more.del:hover{color:#d14343}
 .img-dlg{border:0;border-radius:12px;padding:16px;max-width:min(92vw,640px);background:var(--surface);color:var(--ink)}
 .img-dlg::backdrop{background:rgba(0,0,0,.55)}
+.adp-sum{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.adp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.adp{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:0;background:var(--surface)}
+.adp-img{display:block;width:100%;aspect-ratio:1/1;border:0;padding:0;background:var(--soft);cursor:zoom-in}
+.adp-img img{width:100%;height:100%;object-fit:cover;display:block}
+.adp-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:100%;aspect-ratio:16/7;background:var(--soft);color:var(--sub);font-size:13px;font-weight:600}
+.adp-ph small{font-size:11px;color:var(--muted);font-weight:400}
+.adp-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.adp-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.adp-name{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all}
+.adp-sub{font-size:11.5px;color:var(--muted)}
+.adp-dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:4px 0 0;font-size:12.5px}
+.adp-dl dt{color:var(--muted)}.adp-dl dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.adp-dl dd.big{font-weight:700;font-size:14px}
+.adp-badge{font-size:11px;padding:2px 7px;border-radius:999px;background:#E8F3FF;color:#1B64DA;font-weight:600;white-space:nowrap}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .adp-badge{background:#1B2A40;color:#7DB4FF}}
+:root[data-theme="dark"] .adp-badge{background:#1B2A40;color:#7DB4FF}
 .img-dlg figure{margin:0 0 12px}.img-dlg img{max-width:100%;max-height:70vh;display:block;border-radius:8px;margin:0 auto}
 .img-dlg figcaption{font-size:13px;color:var(--sub);margin-top:8px}
 .adcr-h{margin:16px 0 8px;font-size:13px;font-weight:700;color:var(--sub)}
@@ -823,6 +840,10 @@ footer{color:var(--muted);font-size:12px}
           <span style="margin-left:auto;display:flex;align-items:center;gap:10px"><span id="nstatus" class="eyebrow" role="status"></span><button class="btn primary" id="addNaver" hidden>＋ 네이버 광고 입력</button></span></div>
         <div id="naverEditor" hidden></div>
         <div id="adBrands" style="display:flex;flex-direction:column;gap:16px"></div>
+        <div class="panel" id="adPerfPanel">
+          <div class="panel-head"><div><h3 id="adPerfTitle">광고 내용 · 성과</h3><span class="eyebrow">선택한 브랜드 · 광고비 높은 순 · 이미지를 누르면 크게 보기</span></div></div>
+          <div id="adPerf"></div>
+        </div>
         <div class="panel">
           <div class="panel-head"><h3>월별 광고비 합산</h3><span class="eyebrow">선택한 브랜드 합계 · 광고비 / 예산 (원)</span></div>
           <div class="tbl-wrap"><table id="adMonths"></table></div>
@@ -2052,6 +2073,45 @@ function adBrandTable(b,m){
     t+=`<tbody class="adx-g"><tr class="sum"><th class="adx-ch" colspan="2" scope="row">${BR[b].name} 합계</th>${cells(rs.length?T:null)}<td class="num adx-b">${manW(P)}</td><td>${rs.length?rateCell(P,T.spend):"–"}</td></tr></tbody>`;}
   return t;
 }
+/* 광고 내용 · 성과: 이달 집행된 광고(메타 소재 + 네이버)를 카드로 */
+function adPerfItems(bs,m){
+  const out=[], ms=new Date(Y,m-1,1), me=new Date(Y,m,0);
+  for(const b of bs){
+    const r=adRow("meta",b,m), ads=r&&Array.isArray(r.ads)?r.ads:[];
+    for(const a of ads){
+      const run=adRuns.find(x=>x.brand===b&&((a.adId&&x.adId===a.adId)||(a.imgId&&x.imgId===a.imgId&&x.name===a.name)||x.name===a.name)&&x.start&&D(x.start)<=me&&D(x.end||x.start)>=ms);
+      out.push({b,ch:"메타 광고",name:a.name||"(이름 없음)",kind:a.kind||"",account:a.account||"",imgId:a.imgId||"",start:run?.start||"",end:run?(run.end||run.start):"",
+        s:+a.spend||0,i:+a.impressions||0,c:+a.clicks||0});
+    }
+    if(r&&!ads.length&&(+r.spend||+r.impressions)) out.push({b,ch:"메타 광고",name:"메타 광고 전체",kind:"소재 정보 없음",s:+r.spend||0,i:+r.impressions||0,c:+r.clicks||0});
+    const nv=adRow("naver",b,m);
+    if(nv) for(const [k,label] of NV_KIND){const x=nv[k]||(k==="search"&&!nv.shop?nv:null); if(!x) continue;
+      const s=+x.spend||0,i=+x.impressions||0,c=+x.clicks||0; if(!(s||i||c)) continue;
+      out.push({b,ch:"네이버 광고",name:`네이버 ${label}`,kind:label,memo:nv.memo||"",s,i,c});}
+  }
+  return out.sort((a,c)=>c.s-a.s);
+}
+function renderAdPerf(bs,m){
+  adPerfTitle.textContent=`${m}월 광고 내용 · 성과`;
+  const it=adPerfItems(bs,m);
+  if(!it.length){adPerf.innerHTML=`<span class="empty">${m}월에 집행된 광고가 없습니다.</span>`; return;}
+  const ok=it.filter(x=>x.i>=500&&x.c>0);
+  const bestCtr=ok.slice().sort((a,c)=>c.c/c.i-a.c/a.i)[0], bestCpc=ok.slice().sort((a,c)=>a.s/a.c-c.s/c.c)[0], top=it[0];
+  const T=it.reduce((a,x)=>({s:a.s+x.s,i:a.i+x.i,c:a.c+x.c}),{s:0,i:0,c:0});
+  const sum=[`광고 ${it.length}개`,`광고비 ${won(T.s)}`,`클릭률 ${pct2(T.c,T.i)}`,`클릭당 비용 ${cpc(T.s,T.c)}`];
+  const dt=s=>s?s.slice(5).replace("-","."):"";
+  adPerf.innerHTML=`<div class="adp-sum">${sum.map(x=>`<span class="pill">${x}</span>`).join("")}</div><div class="adp-grid">${it.map(x=>{
+    const badges=[x===top&&x.s?"광고비 1위":"",x===bestCtr?"클릭률 최고":"",x===bestCpc?"클릭당 비용 최저":""].filter(Boolean);
+    const media=x.imgId?`<button class="adp-img" data-img="${esc(x.imgId)}" data-cap="${esc(x.name)}" aria-label="${esc(x.name)} 이미지 크게 보기"><img src="images/${esc(x.imgId)}.jpg" alt="${esc(x.name)} 광고 소재" loading="lazy"></button>`
+      :`<span class="adp-ph">${esc(x.ch)}<small>${esc(x.kind||"이미지 없음")}</small></span>`;
+    const sub=[x.ch==="메타 광고"?x.kind:"",x.account,x.start?`${dt(x.start)} – ${dt(x.end)}`:""].filter(Boolean).join(" · ");
+    return `<article class="adp">${media}<div class="adp-body">
+      <div class="adp-top"><span class="bname ${x.b}">${BR[x.b].name}</span><span class="pill">${esc(x.ch)}</span>${badges.map(t=>`<span class="adp-badge">${t}</span>`).join("")}</div>
+      <b class="adp-name" title="${esc(x.name)}">${esc(x.name)}</b>${sub?`<span class="adp-sub">${esc(sub)}</span>`:""}${x.memo?`<span class="adp-sub">${esc(x.memo)}</span>`:""}
+      <dl class="adp-dl"><dt>광고비</dt><dd class="big">${won(x.s)}</dd><dt>노출</dt><dd>${fmtN(x.i)}</dd><dt>클릭</dt><dd>${fmtN(x.c)}</dd><dt>클릭률</dt><dd>${pct2(x.c,x.i)}</dd><dt>클릭당 비용</dt><dd>${cpc(x.s,x.c)}</dd></dl>
+    </div></article>`;}).join("")}</div>`;
+  adPerf.querySelectorAll("[data-img]").forEach(x=>x.onclick=()=>openImg(x.dataset.img,x.dataset.cap));
+}
 function renderAdsPage(){
   const bs=ORDER.filter(on), m=month, can=canWrite&&dbState==="ready";
   addNaver.hidden=!can;
@@ -2063,13 +2123,14 @@ function renderAdsPage(){
     st("클릭 / 노출",`${fmtN(tot.c)} / ${fmtN(tot.i)}`,"",tot.c?`클릭당 비용 ${cpc(tot.s,tot.c)}`:"")+
     st("예산 소진율",tot.p?Math.round(tot.s/tot.p*100)+"%":"–","",tot.p?`남은 예산 ${won(Math.max(0,tot.p-tot.s))}`:"")+
     st("광고 예산",won(tot.p),"",`메타 ${won(me.p)} · 네이버 ${won(nv.p)}`);
-  if(dbState!=="ready"){adBrands.innerHTML=`<span class="empty">${dataMsg("","")}</span>`; adMonths.innerHTML=""; return;}
+  if(dbState!=="ready"){adBrands.innerHTML=`<span class="empty">${dataMsg("","")}</span>`; adMonths.innerHTML=""; adPerf.innerHTML=""; return;}
   metaSyncB.innerHTML=syncBadge();
   adBrands.innerHTML=bs.map(b=>`<section class="card shop ${b}"><div class="card-head"><div class="tile-top" style="gap:10px">${brandMark(b)}<span class="ig-handle">${m}월 광고 성과 · 합계 ${won((+adRow("meta",b,m)?.spend||0)+(+adRow("naver",b,m)?.spend||0))}</span></div>
       ${can?`<button class="btn sm" data-nv="${b}">${adRow("naver",b,m)?"네이버 수정":"＋ 네이버 입력"}</button>`:""}</div>
     <div class="card-body"><div class="tbl-wrap"><table>${adBrandTable(b,m)}</table></div></div></section>`).join("")||`<span class="empty">선택한 브랜드가 없습니다.</span>`;
   adBrands.querySelectorAll("[data-nv]").forEach(x=>x.onclick=()=>openNaver(x.dataset.nv));
   adBrands.querySelectorAll("[data-img]").forEach(x=>x.onclick=()=>openImg(x.dataset.img,x.dataset.cap));
+  renderAdPerf(bs,m);
   // 월별 광고비 합산 (선택한 브랜드 합계)
   const won0=x=>fmtN(x||0);
   let t=`<thead><tr><th>채널</th>${MONTHS.map(mm=>`<th class="${mm===m?"cur":""}">${mm}월</th>`).join("")}<th>합계</th></tr></thead><tbody>`;
